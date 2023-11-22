@@ -2,21 +2,21 @@
  * @Version    : v1.00
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
- * @LastAuthor : wangchao
- * @LastTime   : 2023-11-22 17:45
+ * @LastAuthor : itchaox
+ * @LastTime   : 2023-11-22 22:35
  * @desc       : 
 -->
 <script setup>
-  import { onMounted, watch, ref, watchEffect } from "vue";
-  import { bitable } from "@lark-base-open/js-sdk";
+  import { onMounted, watch, ref, watchEffect } from 'vue';
+  import { bitable } from '@lark-base-open/js-sdk';
 
-  import Chinese from "chinese-s2t";
+  import Chinese from 'chinese-s2t';
 
   // 目标格式 s 简体; t 繁体
-  const target = ref("t");
+  const target = ref('t');
 
   // 选择模式 cell 单元格; field 字段; database 数据表
-  const selectModel = ref("cell");
+  const selectModel = ref('cell');
 
   const databaseList = ref();
   const databaseId = ref();
@@ -58,10 +58,10 @@
 
   // 切换选择模式时,重置选择
   watch(selectModel, async (newValue, oldValue) => {
-    fieldId.value = "";
+    fieldId.value = '';
     fieldList.value = [];
 
-    if (newValue === "cell") return;
+    if (newValue === 'cell') return;
     // 单列和数据表模式，默认选中当前数据表和当前视图
 
     const selection = await base.getSelection();
@@ -79,7 +79,7 @@
     if (currentFieldId.value && recordId.value) {
       // 修改当前数据
       let data = await table.getCellValue(currentFieldId.value, recordId.value);
-      console.log("🚀  data:", data);
+      console.log('🚀  data:', data);
       if (data && data[0].text !== currentValue.value) {
         currentValue.value = data[0].text;
       }
@@ -88,9 +88,9 @@
 
   async function confirm() {
     isLoading.value = true;
-    if (selectModel.value === "cell") {
+    if (selectModel.value === 'cell') {
       await cellChange();
-    } else if (selectModel.value === "field") {
+    } else if (selectModel.value === 'field') {
       await fieldChange();
     } else {
       await databaseChange();
@@ -103,7 +103,7 @@
     let newValue;
 
     // 简体转繁体
-    if (target.value === "t") {
+    if (target.value === 't') {
       newValue = Chinese.s2t(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -111,7 +111,7 @@
     }
 
     // 繁体转简体
-    if (target.value === "s") {
+    if (target.value === 's') {
       newValue = Chinese.t2s(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -121,8 +121,8 @@
 
   async function fieldChange() {
     ElMessage({
-      message: "开始转换数据~",
-      type: "success",
+      message: '开始转换数据~',
+      type: 'success',
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -149,12 +149,12 @@
       let newValue;
 
       // 简体转繁体
-      if (target.value === "t") {
+      if (target.value === 't') {
         newValue = Chinese.s2t(val[0]?.text);
       }
 
       // 繁体转简体
-      if (target.value === "s") {
+      if (target.value === 's') {
         newValue = Chinese.t2s(val[0]?.text);
       }
 
@@ -171,15 +171,15 @@
     await table.setRecords(_list);
 
     ElMessage({
-      message: "数据转换结束!",
-      type: "success",
+      message: '数据转换结束!',
+      type: 'success',
     });
   }
 
   async function databaseChange() {
     ElMessage({
-      message: "开始转换数据~",
-      type: "success",
+      message: '开始转换数据~',
+      type: 'success',
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -187,14 +187,16 @@
     const recordList = await table.getRecordList();
     const recordIds = await table.getRecordIdList(); // 获取所有记录 id
 
-    for (const record of recordList) {
-      const id = record.id;
-      // 获取索引
-      const index = recordList.recordIdList.findIndex((iId) => iId === id);
+    const filterFieldList = _fieldList.filter((item) => item.type === 1);
 
-      // 只遍历文本列
-      const filterFieldList = _fieldList.filter((item) => item.type === 1);
-      for (const item of filterFieldList) {
+    for (const item of filterFieldList) {
+      let _list = [];
+      for (const record of recordList) {
+        const id = record.id;
+        // 获取索引
+        const index = recordList.recordIdList.findIndex((iId) => iId === id);
+
+        // 只遍历文本列
         const field = await table.getFieldById(item.id);
         const cell = await field.getCell(recordIds[index]);
         const val = await cell.getValue();
@@ -203,24 +205,32 @@
           let newValue;
 
           // 简体转繁体
-          if (target.value === "t") {
+          if (target.value === 't') {
             newValue = Chinese.s2t(val[0]?.text);
           }
 
           // 繁体转简体
-          if (target.value === "s") {
+          if (target.value === 's') {
             newValue = Chinese.t2s(val[0]?.text);
           }
 
-          // 根据手机号码获取手机号码所属地
-          await table.setCellValue(item.id, recordIds[index], newValue);
+          // FIXME 处理数据
+          _list.push({
+            recordId: recordIds[index],
+            fields: {
+              [item.id]: newValue,
+            },
+          });
         }
       }
+
+      // FIXME 此处一次性全部替换
+      await table.setRecords(_list);
     }
 
     ElMessage({
-      message: "数据转换结束!",
-      type: "success",
+      message: '数据转换结束!',
+      type: 'success',
     });
   }
 </script>
