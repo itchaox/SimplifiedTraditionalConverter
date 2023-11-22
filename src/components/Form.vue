@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : wangchao
- * @LastTime   : 2023-11-22 08:54
+ * @LastTime   : 2023-11-22 17:45
  * @desc       : 
 -->
 <script setup>
@@ -15,8 +15,8 @@
   // 目标格式 s 简体; t 繁体
   const target = ref("t");
 
-  // 数据范围 cell 单元格; field 单列; database 视图
-  const dataRange = ref("cell");
+  // 选择模式 cell 单元格; field 字段; database 数据表
+  const selectModel = ref("cell");
 
   const databaseList = ref();
   const databaseId = ref();
@@ -43,6 +43,7 @@
   watchEffect(async () => {
     const table = await bitable.base.getTable(databaseId.value);
     viewList.value = await table.getViewMetaList();
+    viewId.value = viewList.value[0]?.id;
   });
 
   // 根据视图列表获取字段列表
@@ -55,13 +56,18 @@
     fieldList.value = _list.filter((item) => item.type === 1);
   });
 
-  // 切换数据纬度时,重置选择
-  watch(dataRange, () => {
-    databaseId.value = "";
-    viewId.value = "";
-    viewList.value = [];
+  // 切换选择模式时,重置选择
+  watch(selectModel, async (newValue, oldValue) => {
     fieldId.value = "";
     fieldList.value = [];
+
+    if (newValue === "cell") return;
+    // 单列和数据表模式，默认选中当前数据表和当前视图
+
+    const selection = await base.getSelection();
+
+    databaseId.value = selection.tableId;
+    viewId.value = selection.viewId;
   });
 
   bitable.base.onSelectionChange(async (event) => {
@@ -82,9 +88,9 @@
 
   async function confirm() {
     isLoading.value = true;
-    if (dataRange.value === "cell") {
+    if (selectModel.value === "cell") {
       await cellChange();
-    } else if (dataRange.value === "field") {
+    } else if (selectModel.value === "field") {
       await fieldChange();
     } else {
       await databaseChange();
@@ -123,12 +129,21 @@
     const recordList = await table.getRecordList();
     const recordIds = await table.getRecordIdList(); // 获取所有记录 id
 
+    let _list = [];
+
     for (const record of recordList) {
       const id = record.id;
       // 获取索引
       const index = recordList.recordIdList.findIndex((iId) => iId === id);
-      const cell = await record.getCellByField(fieldId.value);
-      const val = await cell.val;
+
+      // FIXME 用这个api获取 cell，性能很差
+      // const cell = await record.getCellByField(fieldId.value);
+
+      const field = await table.getFieldById(fieldId.value);
+      const cell = await field.getCell(recordIds[index]);
+      const val = await cell.getValue();
+      // const val = await cell.val;
+
       if (!val) continue;
 
       let newValue;
@@ -143,9 +158,17 @@
         newValue = Chinese.t2s(val[0]?.text);
       }
 
-      // 根据手机号码获取手机号码所属地
-      await table.setCellValue(fieldId.value, recordIds[index], newValue);
+      // FIXME 处理数据
+      _list.push({
+        recordId: recordIds[index],
+        fields: {
+          [fieldId.value]: newValue,
+        },
+      });
     }
+
+    // FIXME 此处一次性全部替换
+    await table.setRecords(_list);
 
     ElMessage({
       message: "数据转换结束!",
@@ -172,8 +195,10 @@
       // 只遍历文本列
       const filterFieldList = _fieldList.filter((item) => item.type === 1);
       for (const item of filterFieldList) {
-        const cell = await record.getCellByField(item.id);
-        const val = await cell.val;
+        const field = await table.getFieldById(item.id);
+        const cell = await field.getCell(recordIds[index]);
+        const val = await cell.getValue();
+
         if (val) {
           let newValue;
 
@@ -203,26 +228,26 @@
 <template>
   <div>
     <div class="tip">
-      <div class="tip-text title">操作说明:</div>
+      <div class="tip-text title">操作步骤:</div>
 
       <div class="tip-text">1. 选择目标格式</div>
       <div
         class="tip-text"
-        v-if="dataRange === 'cell'"
+        v-if="selectModel === 'cell'"
       >
         2. 选择需要转换的单元格
       </div>
       <div
         class="tip-text"
-        v-else-if="dataRange === 'field'"
+        v-else-if="selectModel === 'field'"
       >
         2. 选择顺序: 数据表 -> 视图 -> 字段
       </div>
       <div
         class="tip-text"
-        v-else-if="dataRange === 'database'"
+        v-else-if="selectModel === 'database'"
       >
-        2. 选择需要转化的数据表
+        2. 选择需要转换的数据表
       </div>
       <div class="tip-text">3. 点击[确认转换]按钮即可</div>
     </div>
@@ -237,8 +262,8 @@
   </div>
 
   <div class="label">
-    <div class="text">数据纬度:</div>
-    <el-radio-group v-model="dataRange">
+    <div class="text">选择模式:</div>
+    <el-radio-group v-model="selectModel">
       <el-radio-button label="cell">单元格</el-radio-button>
       <el-radio-button label="field">字段</el-radio-button>
       <el-radio-button label="database">数据表</el-radio-button>
@@ -247,7 +272,7 @@
 
   <div
     class="label"
-    v-if="dataRange !== 'cell'"
+    v-if="selectModel !== 'cell'"
   >
     <div class="text">数据表:</div>
     <el-select
@@ -265,7 +290,7 @@
 
   <div
     class="label"
-    v-if="dataRange === 'field'"
+    v-if="selectModel === 'field'"
   >
     <div class="text">视图:</div>
     <el-select
@@ -282,7 +307,7 @@
   </div>
   <div
     class="label"
-    v-if="dataRange === 'field'"
+    v-if="selectModel === 'field'"
   >
     <div class="text">字段:</div>
     <el-select
