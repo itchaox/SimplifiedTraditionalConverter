@@ -3,11 +3,11 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : itchaox
- * @LastTime   : 2023-11-22 22:35
+ * @LastTime   : 2023-11-23 07:14
  * @desc       : 
 -->
 <script setup>
-  import { onMounted, watch, ref, watchEffect } from 'vue';
+  import { onMounted, watch, ref, watchEffect, nextTick } from 'vue';
   import { bitable } from '@lark-base-open/js-sdk';
 
   import Chinese from 'chinese-s2t';
@@ -39,16 +39,18 @@
     databaseList.value = await base.getTableMetaList();
   });
 
-  // 根据数据表获取视图列表
-  watchEffect(async () => {
-    const table = await bitable.base.getTable(databaseId.value);
-    viewList.value = await table.getViewMetaList();
-    viewId.value = viewList.value[0]?.id;
-  });
+  // 切换数据表, 默认选择第一个视图
+  async function databaseChange() {
+    if (selectModel.value === 'field') {
+      const table = await base.getTable(databaseId.value);
+      viewList.value = await table.getViewMetaList();
+      viewId.value = viewList.value[0]?.id;
+    }
+  }
 
   // 根据视图列表获取字段列表
   watch(viewId, async (newValue, oldValue) => {
-    const table = await bitable.base.getTable(databaseId.value);
+    const table = await base.getTable(databaseId.value);
     const view = await table.getViewById(newValue);
     const _list = await view.getFieldMetaList();
 
@@ -58,19 +60,23 @@
 
   // 切换选择模式时,重置选择
   watch(selectModel, async (newValue, oldValue) => {
-    fieldId.value = '';
-    fieldList.value = [];
-
     if (newValue === 'cell') return;
     // 单列和数据表模式，默认选中当前数据表和当前视图
 
     const selection = await base.getSelection();
-
     databaseId.value = selection.tableId;
-    viewId.value = selection.viewId;
+
+    if (newValue === 'field') {
+      fieldId.value = '';
+      fieldList.value = [];
+
+      const table = await base.getTable(databaseId.value);
+      viewList.value = await table.getViewMetaList();
+      viewId.value = selection.viewId;
+    }
   });
 
-  bitable.base.onSelectionChange(async (event) => {
+  base.onSelectionChange(async (event) => {
     // 获取点击的字段id和记录id
     currentFieldId.value = event.data.fieldId;
     recordId.value = event.data.recordId;
@@ -89,16 +95,16 @@
   async function confirm() {
     isLoading.value = true;
     if (selectModel.value === 'cell') {
-      await cellChange();
+      await cellModel();
     } else if (selectModel.value === 'field') {
-      await fieldChange();
+      await fieldModel();
     } else {
-      await databaseChange();
+      await databaseModel();
     }
     isLoading.value = false;
   }
 
-  async function cellChange() {
+  async function cellModel() {
     const table = await base.getActiveTable();
     let newValue;
 
@@ -119,7 +125,7 @@
     }
   }
 
-  async function fieldChange() {
+  async function fieldModel() {
     ElMessage({
       message: '开始转换数据~',
       type: 'success',
@@ -176,7 +182,7 @@
     });
   }
 
-  async function databaseChange() {
+  async function databaseModel() {
     ElMessage({
       message: '开始转换数据~',
       type: 'success',
@@ -288,6 +294,7 @@
     <el-select
       v-model="databaseId"
       placeholder="请选择数据表"
+      @change="databaseChange"
     >
       <el-option
         v-for="item in databaseList"
