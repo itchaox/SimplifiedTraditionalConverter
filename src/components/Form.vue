@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : wangchao
- * @LastTime   : 2023-11-23 09:50
+ * @LastTime   : 2023-11-23 09:55
  * @desc       : 
 -->
 <script setup>
@@ -141,6 +141,7 @@
     ElMessage({
       message: "开始转换数据~",
       type: "success",
+      duration: 1500,
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -191,6 +192,7 @@
     ElMessage({
       message: "数据转换结束!",
       type: "success",
+      duration: 1500,
     });
   }
 
@@ -198,6 +200,7 @@
     ElMessage({
       message: "开始转换数据~",
       type: "success",
+      duration: 1500,
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -249,6 +252,7 @@
     ElMessage({
       message: "数据转换结束!",
       type: "success",
+      duration: 1500,
     });
   }
 </script>
