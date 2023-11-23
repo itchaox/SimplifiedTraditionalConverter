@@ -2,21 +2,21 @@
  * @Version    : v1.00
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
- * @LastAuthor : itchaox
- * @LastTime   : 2023-11-23 07:14
+ * @LastAuthor : wangchao
+ * @LastTime   : 2023-11-23 09:50
  * @desc       : 
 -->
 <script setup>
-  import { onMounted, watch, ref, watchEffect, nextTick } from 'vue';
-  import { bitable } from '@lark-base-open/js-sdk';
+  import { onMounted, watch, ref, watchEffect, nextTick } from "vue";
+  import { bitable } from "@lark-base-open/js-sdk";
 
-  import Chinese from 'chinese-s2t';
+  import Chinese from "chinese-s2t";
 
   // 目标格式 s 简体; t 繁体
-  const target = ref('t');
+  const target = ref("t");
 
   // 选择模式 cell 单元格; field 字段; database 数据表
-  const selectModel = ref('cell');
+  const selectModel = ref("cell");
 
   const databaseList = ref();
   const databaseId = ref();
@@ -41,7 +41,7 @@
 
   // 切换数据表, 默认选择第一个视图
   async function databaseChange() {
-    if (selectModel.value === 'field') {
+    if (selectModel.value === "field") {
       const table = await base.getTable(databaseId.value);
       viewList.value = await table.getViewMetaList();
       viewId.value = viewList.value[0]?.id;
@@ -60,15 +60,16 @@
 
   // 切换选择模式时,重置选择
   watch(selectModel, async (newValue, oldValue) => {
-    if (newValue === 'cell') return;
+    if (newValue === "cell") return;
     // 单列和数据表模式，默认选中当前数据表和当前视图
 
     const selection = await base.getSelection();
     databaseId.value = selection.tableId;
 
-    if (newValue === 'field') {
-      fieldId.value = '';
+    if (newValue === "field") {
+      fieldId.value = "";
       fieldList.value = [];
+      viewId.value = "";
 
       const table = await base.getTable(databaseId.value);
       viewList.value = await table.getViewMetaList();
@@ -76,16 +77,27 @@
     }
   });
 
+  // 数据表修改后，自动获取视图列表
+  watchEffect(async () => {
+    const table = await base.getTable(databaseId.value);
+    viewList.value = await table.getViewMetaList();
+  });
+
   base.onSelectionChange(async (event) => {
     // 获取点击的字段id和记录id
     currentFieldId.value = event.data.fieldId;
     recordId.value = event.data.recordId;
 
+    // 获取当前数据表和视图
+    databaseId.value = event.data.tableId;
+    viewId.value = event.data.viewId;
+
+    // FIXME 数据表切换后，视图自动切换
+
     const table = await base.getActiveTable();
     if (currentFieldId.value && recordId.value) {
       // 修改当前数据
       let data = await table.getCellValue(currentFieldId.value, recordId.value);
-      console.log('🚀  data:', data);
       if (data && data[0].text !== currentValue.value) {
         currentValue.value = data[0].text;
       }
@@ -94,9 +106,9 @@
 
   async function confirm() {
     isLoading.value = true;
-    if (selectModel.value === 'cell') {
+    if (selectModel.value === "cell") {
       await cellModel();
-    } else if (selectModel.value === 'field') {
+    } else if (selectModel.value === "field") {
       await fieldModel();
     } else {
       await databaseModel();
@@ -109,7 +121,7 @@
     let newValue;
 
     // 简体转繁体
-    if (target.value === 't') {
+    if (target.value === "t") {
       newValue = Chinese.s2t(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -117,7 +129,7 @@
     }
 
     // 繁体转简体
-    if (target.value === 's') {
+    if (target.value === "s") {
       newValue = Chinese.t2s(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -127,8 +139,8 @@
 
   async function fieldModel() {
     ElMessage({
-      message: '开始转换数据~',
-      type: 'success',
+      message: "开始转换数据~",
+      type: "success",
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -155,12 +167,12 @@
       let newValue;
 
       // 简体转繁体
-      if (target.value === 't') {
+      if (target.value === "t") {
         newValue = Chinese.s2t(val[0]?.text);
       }
 
       // 繁体转简体
-      if (target.value === 's') {
+      if (target.value === "s") {
         newValue = Chinese.t2s(val[0]?.text);
       }
 
@@ -177,15 +189,15 @@
     await table.setRecords(_list);
 
     ElMessage({
-      message: '数据转换结束!',
-      type: 'success',
+      message: "数据转换结束!",
+      type: "success",
     });
   }
 
   async function databaseModel() {
     ElMessage({
-      message: '开始转换数据~',
-      type: 'success',
+      message: "开始转换数据~",
+      type: "success",
     });
 
     const table = await bitable.base.getTable(databaseId.value);
@@ -211,12 +223,12 @@
           let newValue;
 
           // 简体转繁体
-          if (target.value === 't') {
+          if (target.value === "t") {
             newValue = Chinese.s2t(val[0]?.text);
           }
 
           // 繁体转简体
-          if (target.value === 's') {
+          if (target.value === "s") {
             newValue = Chinese.t2s(val[0]?.text);
           }
 
@@ -235,8 +247,8 @@
     }
 
     ElMessage({
-      message: '数据转换结束!',
-      type: 'success',
+      message: "数据转换结束!",
+      type: "success",
     });
   }
 </script>
