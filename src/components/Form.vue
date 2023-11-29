@@ -2,21 +2,21 @@
  * @Version    : v1.00
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
- * @LastAuthor : wangchao
- * @LastTime   : 2023-11-23 09:55
+ * @LastAuthor : itchaox
+ * @LastTime   : 2023-11-29 22:03
  * @desc       : 
 -->
 <script setup>
-  import { onMounted, watch, ref, watchEffect, nextTick } from "vue";
-  import { bitable } from "@lark-base-open/js-sdk";
+  import { onMounted, watch, ref, watchEffect, nextTick } from 'vue';
+  import { bitable } from '@lark-base-open/js-sdk';
 
-  import Chinese from "chinese-s2t";
+  import Chinese from 'chinese-s2t';
 
   // 目标格式 s 简体; t 繁体
-  const target = ref("t");
+  const target = ref('t');
 
   // 选择模式 cell 单元格; field 字段; database 数据表
-  const selectModel = ref("cell");
+  const selectModel = ref('cell');
 
   const databaseList = ref();
   const databaseId = ref();
@@ -41,7 +41,7 @@
 
   // 切换数据表, 默认选择第一个视图
   async function databaseChange() {
-    if (selectModel.value === "field") {
+    if (selectModel.value === 'field') {
       const table = await base.getTable(databaseId.value);
       viewList.value = await table.getViewMetaList();
       viewId.value = viewList.value[0]?.id;
@@ -60,16 +60,16 @@
 
   // 切换选择模式时,重置选择
   watch(selectModel, async (newValue, oldValue) => {
-    if (newValue === "cell") return;
+    if (newValue === 'cell') return;
     // 单列和数据表模式，默认选中当前数据表和当前视图
 
     const selection = await base.getSelection();
     databaseId.value = selection.tableId;
 
-    if (newValue === "field") {
-      fieldId.value = "";
+    if (newValue === 'field') {
+      fieldId.value = '';
       fieldList.value = [];
-      viewId.value = "";
+      viewId.value = '';
 
       const table = await base.getTable(databaseId.value);
       viewList.value = await table.getViewMetaList();
@@ -106,9 +106,9 @@
 
   async function confirm() {
     isLoading.value = true;
-    if (selectModel.value === "cell") {
+    if (selectModel.value === 'cell') {
       await cellModel();
-    } else if (selectModel.value === "field") {
+    } else if (selectModel.value === 'field') {
       await fieldModel();
     } else {
       await databaseModel();
@@ -121,7 +121,7 @@
     let newValue;
 
     // 简体转繁体
-    if (target.value === "t") {
+    if (target.value === 't') {
       newValue = Chinese.s2t(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -129,7 +129,7 @@
     }
 
     // 繁体转简体
-    if (target.value === "s") {
+    if (target.value === 's') {
       newValue = Chinese.t2s(currentValue.value);
       if (currentFieldId.value && recordId.value) {
         await table.setCellValue(currentFieldId.value, recordId.value, newValue);
@@ -139,8 +139,8 @@
 
   async function fieldModel() {
     ElMessage({
-      message: "开始转换数据~",
-      type: "success",
+      message: '开始转换数据~',
+      type: 'success',
       duration: 1500,
     });
 
@@ -168,12 +168,12 @@
       let newValue;
 
       // 简体转繁体
-      if (target.value === "t") {
+      if (target.value === 't') {
         newValue = Chinese.s2t(val[0]?.text);
       }
 
       // 繁体转简体
-      if (target.value === "s") {
+      if (target.value === 's') {
         newValue = Chinese.t2s(val[0]?.text);
       }
 
@@ -190,16 +190,16 @@
     await table.setRecords(_list);
 
     ElMessage({
-      message: "数据转换结束!",
-      type: "success",
+      message: '数据转换结束!',
+      type: 'success',
       duration: 1500,
     });
   }
 
   async function databaseModel() {
     ElMessage({
-      message: "开始转换数据~",
-      type: "success",
+      message: '开始转换数据~',
+      type: 'success',
       duration: 1500,
     });
 
@@ -226,12 +226,12 @@
           let newValue;
 
           // 简体转繁体
-          if (target.value === "t") {
+          if (target.value === 't') {
             newValue = Chinese.s2t(val[0]?.text);
           }
 
           // 繁体转简体
-          if (target.value === "s") {
+          if (target.value === 's') {
             newValue = Chinese.t2s(val[0]?.text);
           }
 
@@ -250,122 +250,134 @@
     }
 
     ElMessage({
-      message: "数据转换结束!",
-      type: "success",
+      message: '数据转换结束!',
+      type: 'success',
       duration: 1500,
     });
   }
 </script>
 
 <template>
-  <div>
-    <div class="tip">
-      <div class="tip-text title">操作步骤:</div>
+  <div class="s2t">
+    <div>
+      <div class="tip">
+        <div class="tip-text title">操作步骤:</div>
 
-      <div class="tip-text">1. 选择目标格式</div>
-      <div
-        class="tip-text"
-        v-if="selectModel === 'cell'"
-      >
-        2. 选择需要转换的单元格
+        <div class="tip-text">1. 选择目标格式</div>
+        <div
+          class="tip-text"
+          v-if="selectModel === 'cell'"
+        >
+          2. 选择需要转换的单元格
+        </div>
+        <div
+          class="tip-text"
+          v-else-if="selectModel === 'field'"
+        >
+          2. 选择顺序: 数据表 -> 视图 -> 字段
+        </div>
+        <div
+          class="tip-text"
+          v-else-if="selectModel === 'database'"
+        >
+          2. 选择需要转换的数据表
+        </div>
+        <div class="tip-text">3. 点击[确认转换]按钮即可</div>
       </div>
-      <div
-        class="tip-text"
-        v-else-if="selectModel === 'field'"
-      >
-        2. 选择顺序: 数据表 -> 视图 -> 字段
-      </div>
-      <div
-        class="tip-text"
-        v-else-if="selectModel === 'database'"
-      >
-        2. 选择需要转换的数据表
-      </div>
-      <div class="tip-text">3. 点击[确认转换]按钮即可</div>
     </div>
-  </div>
 
-  <div class="label">
-    <div class="text">目标格式:</div>
-    <el-radio-group v-model="target">
-      <el-radio-button label="s">简体</el-radio-button>
-      <el-radio-button label="t">繁体</el-radio-button>
-    </el-radio-group>
-  </div>
+    <div class="label">
+      <div class="text">目标格式:</div>
+      <el-radio-group v-model="target">
+        <el-radio-button label="s">简体</el-radio-button>
+        <el-radio-button label="t">繁体</el-radio-button>
+      </el-radio-group>
+    </div>
 
-  <div class="label">
-    <div class="text">选择模式:</div>
-    <el-radio-group v-model="selectModel">
-      <el-radio-button label="cell">单元格</el-radio-button>
-      <el-radio-button label="field">字段</el-radio-button>
-      <el-radio-button label="database">数据表</el-radio-button>
-    </el-radio-group>
-  </div>
+    <div class="label">
+      <div class="text">选择模式:</div>
+      <el-radio-group v-model="selectModel">
+        <el-radio-button label="cell">单元格</el-radio-button>
+        <el-radio-button label="field">字段</el-radio-button>
+        <el-radio-button label="database">数据表</el-radio-button>
+      </el-radio-group>
+    </div>
 
-  <div
-    class="label"
-    v-if="selectModel !== 'cell'"
-  >
-    <div class="text">数据表:</div>
-    <el-select
-      v-model="databaseId"
-      placeholder="请选择数据表"
-      @change="databaseChange"
+    <div
+      class="label"
+      v-if="selectModel !== 'cell'"
     >
-      <el-option
-        v-for="item in databaseList"
-        :key="item.id"
-        :label="item.name"
-        :value="item.id"
-      />
-    </el-select>
-  </div>
+      <div class="text">数据表:</div>
+      <el-select
+        v-model="databaseId"
+        placeholder="请选择数据表"
+        @change="databaseChange"
+        popper-class="selectStyle"
+      >
+        <el-option
+          v-for="item in databaseList"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        />
+      </el-select>
+    </div>
 
-  <div
-    class="label"
-    v-if="selectModel === 'field'"
-  >
-    <div class="text">视图:</div>
-    <el-select
-      v-model="viewId"
-      placeholder="请选择视图"
+    <div
+      class="label"
+      v-if="selectModel === 'field'"
     >
-      <el-option
-        v-for="item in viewList"
-        :key="item.id"
-        :label="item.name"
-        :value="item.id"
-      />
-    </el-select>
-  </div>
-  <div
-    class="label"
-    v-if="selectModel === 'field'"
-  >
-    <div class="text">字段:</div>
-    <el-select
-      v-model="fieldId"
-      placeholder="请选择字段"
+      <div class="text">视图:</div>
+      <el-select
+        v-model="viewId"
+        placeholder="请选择视图"
+        popper-class="selectStyle"
+      >
+        <el-option
+          v-for="item in viewList"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        />
+      </el-select>
+    </div>
+    <div
+      class="label"
+      v-if="selectModel === 'field'"
     >
-      <el-option
-        v-for="item in fieldList"
-        :key="item.id"
-        :label="item.name"
-        :value="item.id"
-      />
-    </el-select>
+      <div class="text">字段:</div>
+      <el-select
+        v-model="fieldId"
+        placeholder="请选择字段"
+        popper-class="selectStyle"
+      >
+        <el-option
+          v-for="item in fieldList"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        />
+      </el-select>
+    </div>
+    <el-button
+      type="primary"
+      class="btn"
+      @click="confirm"
+      :loading="isLoading"
+    >
+      确认转换</el-button
+    >
   </div>
-
-  <el-button
-    type="primary"
-    class="btn"
-    @click="confirm"
-    :loading="isLoading"
-    >确认转换</el-button
-  >
 </template>
 
 <style scoped>
+  .s2t {
+    font-family: LarkHackSafariFont, LarkEmojiFont, LarkChineseQuote, -apple-system, BlinkMacSystemFont, Helvetica Neue,
+      Tahoma, PingFang SC, Microsoft Yahei, Arial, Hiragino Sans GB, sans-serif, Apple Color Emoji, Segoe UI Emoji,
+      Segoe UI Symbol, Noto Color Emoji;
+    font-weight: 300;
+  }
+
   .tip {
     color: #8f959e;
     font-size: 12px;
@@ -389,10 +401,49 @@
       width: 70px;
       margin-right: 10px;
       white-space: nowrap;
+      font-size: 14px;
+    }
+
+    :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+      color: #fff;
+      background-color: rgb(20, 86, 240);
+      border-color: rgb(20, 86, 240);
+      box-shadow: 1px 0 0 0 rgb(20, 86, 240);
+    }
+
+    :deep(.el-radio-button__inner) {
+      font-weight: 300;
+    }
+
+    :deep(.el-radio-button__inner:hover) {
+      color: rgb(20, 86, 240);
+    }
+
+    :deep(.el-input__inner) {
+      font-weight: 300;
     }
   }
 
   .btn {
     margin-top: 14px;
+    background-color: rgb(20, 86, 240);
+    border-color: rgb(20, 86, 240);
+    font-weight: 300;
+    &:hover {
+      background-color: rgb(51, 109, 244);
+      border-color: rgb(20, 86, 240);
+    }
+  }
+</style>
+
+<style>
+  .selectStyle {
+    .el-select-dropdown__item {
+      font-weight: 300 !important;
+    }
+
+    .el-select-dropdown__item.selected {
+      color: rgb(20, 86, 240);
+    }
   }
 </style>
