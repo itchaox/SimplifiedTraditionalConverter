@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : itchaox
- * @LastTime   : 2023-12-01 01:49
+ * @LastTime   : 2023-12-01 01:51
  * @desc       : 
 -->
 <script setup>
@@ -40,7 +40,7 @@
   // 繁体模式 1 正体繁体; 2 台湾繁体; 3 香港繁体
   const traditionalModel = ref('1');
 
-  // 地域模式 1 不使用; 2 台湾繁体
+  // 地域模式 1 不使用; 2 台湾模式
   const localModel = ref('1');
 
   onMounted(async () => {
