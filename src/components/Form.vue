@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : itchaox
- * @LastTime   : 2023-11-29 22:03
+ * @LastTime   : 2023-12-01 01:42
  * @desc       : 
 -->
 <script setup>
@@ -11,6 +11,8 @@
   import { bitable } from '@lark-base-open/js-sdk';
 
   import Chinese from 'chinese-s2t';
+
+  import opencc from 'node-opencc';
 
   // 目标格式 s 简体; t 繁体
   const target = ref('t');
@@ -34,6 +36,12 @@
   const recordId = ref();
 
   const currentValue = ref();
+
+  // 繁体模式 1 正体繁体; 2 台湾繁体; 3 香港繁体
+  const traditionalModel = ref('1');
+
+  // 地域模式 1 大陆繁体; 2 台湾繁体
+  const localModel = ref('1');
 
   onMounted(async () => {
     databaseList.value = await base.getTableMetaList();
@@ -118,22 +126,20 @@
 
   async function cellModel() {
     const table = await base.getActiveTable();
-    let newValue;
+    let newValue = getNewValue(currentValue.value);
 
-    // 简体转繁体
-    if (target.value === 't') {
-      newValue = Chinese.s2t(currentValue.value);
-      if (currentFieldId.value && recordId.value) {
-        await table.setCellValue(currentFieldId.value, recordId.value, newValue);
-      }
-    }
+    // // 简体转繁体
+    // if (target.value === 't') {
+    //   newValue = Chinese.s2t(currentValue.value);
+    // }
 
-    // 繁体转简体
-    if (target.value === 's') {
-      newValue = Chinese.t2s(currentValue.value);
-      if (currentFieldId.value && recordId.value) {
-        await table.setCellValue(currentFieldId.value, recordId.value, newValue);
-      }
+    // // 繁体转简体
+    // if (target.value === 's') {
+    //   newValue = Chinese.t2s(currentValue.value);
+    // }
+
+    if (currentFieldId.value && recordId.value) {
+      await table.setCellValue(currentFieldId.value, recordId.value, newValue);
     }
   }
 
@@ -165,17 +171,17 @@
 
       if (!val) continue;
 
-      let newValue;
+      let newValue = getNewValue(val[0]?.text);
 
-      // 简体转繁体
-      if (target.value === 't') {
-        newValue = Chinese.s2t(val[0]?.text);
-      }
+      // // 简体转繁体
+      // if (target.value === 't') {
+      //   newValue = Chinese.s2t(val[0]?.text);
+      // }
 
-      // 繁体转简体
-      if (target.value === 's') {
-        newValue = Chinese.t2s(val[0]?.text);
-      }
+      // // 繁体转简体
+      // if (target.value === 's') {
+      //   newValue = Chinese.t2s(val[0]?.text);
+      // }
 
       // FIXME 处理数据
       _list.push({
@@ -223,17 +229,17 @@
         const val = await cell.getValue();
 
         if (val) {
-          let newValue;
+          let newValue = getNewValue(val[0]?.text);
 
-          // 简体转繁体
-          if (target.value === 't') {
-            newValue = Chinese.s2t(val[0]?.text);
-          }
+          // // 简体转繁体
+          // if (target.value === 't') {
+          //   newValue = Chinese.s2t(val[0]?.text);
+          // }
 
-          // 繁体转简体
-          if (target.value === 's') {
-            newValue = Chinese.t2s(val[0]?.text);
-          }
+          // // 繁体转简体
+          // if (target.value === 's') {
+          //   newValue = Chinese.t2s(val[0]?.text);
+          // }
 
           // FIXME 处理数据
           _list.push({
@@ -255,6 +261,37 @@
       duration: 1500,
     });
   }
+
+  function getNewValue(value) {
+    let newValue;
+    if (target.value === 's') {
+      // 简体
+      newValue = opencc.taiwanToSimplifiedWithPhrases(value);
+    } else {
+      // 繁体
+
+      switch (traditionalModel.value) {
+        case '1':
+          // 正体繁体
+          newValue = opencc.simplifiedToTraditional(value);
+          break;
+        case '2':
+          // 台湾繁体
+          if (localModel.value === '1') {
+            newValue = opencc.simplifiedToTaiwan(value);
+          } else {
+            // 台湾地域
+            newValue = opencc.simplifiedToTaiwanWithPhrases(value);
+          }
+          break;
+        default:
+          // 香港繁体
+          newValue = opencc.simplifiedToHongKong(value);
+      }
+    }
+
+    return newValue;
+  }
 </script>
 
 <template>
@@ -264,25 +301,26 @@
         <div class="tip-text title">操作步骤:</div>
 
         <div class="tip-text">1. 选择目标格式</div>
+        <div class="tip-text">2. 目标格式为繁体, 自行选择繁体标准和地域模式</div>
         <div
           class="tip-text"
           v-if="selectModel === 'cell'"
         >
-          2. 选择需要转换的单元格
+          3. 选择需要转换的单元格
         </div>
         <div
           class="tip-text"
           v-else-if="selectModel === 'field'"
         >
-          2. 选择顺序: 数据表 -> 视图 -> 字段
+          3. 选择顺序: 数据表 -> 视图 -> 字段
         </div>
         <div
           class="tip-text"
           v-else-if="selectModel === 'database'"
         >
-          2. 选择需要转换的数据表
+          3. 选择需要转换的数据表
         </div>
-        <div class="tip-text">3. 点击[确认转换]按钮即可</div>
+        <div class="tip-text">4. 点击【确认转换】按钮即可</div>
       </div>
     </div>
 
@@ -291,6 +329,30 @@
       <el-radio-group v-model="target">
         <el-radio-button label="s">简体</el-radio-button>
         <el-radio-button label="t">繁体</el-radio-button>
+      </el-radio-group>
+    </div>
+
+    <div
+      class="label"
+      v-if="target === 't'"
+    >
+      <div class="text">繁体标准:</div>
+      <el-radio-group v-model="traditionalModel">
+        <el-radio-button label="1">正体繁体</el-radio-button>
+        <el-radio-button label="2">台湾繁体</el-radio-button>
+        <el-radio-button label="3">香港繁体</el-radio-button>
+      </el-radio-group>
+    </div>
+
+    <!-- 台湾繁体才允许选择地域, 其他都默认不使用 -->
+    <div
+      class="label"
+      v-if="target === 't' && traditionalModel === '2'"
+    >
+      <div class="text">地域模式:</div>
+      <el-radio-group v-model="localModel">
+        <el-radio-button label="1">不使用</el-radio-button>
+        <el-radio-button label="2">台湾模式</el-radio-button>
       </el-radio-group>
     </div>
 
