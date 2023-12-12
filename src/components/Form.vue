@@ -3,16 +3,15 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : itchaox
- * @LastTime   : 2023-12-01 01:51
+ * @LastTime   : 2023-12-12 21:38
  * @desc       : 
 -->
 <script setup>
-  import { onMounted, watch, ref, watchEffect, nextTick } from 'vue';
+  import { onMounted, watch, ref, watchEffect } from 'vue';
   import { bitable } from '@lark-base-open/js-sdk';
 
-  import Chinese from 'chinese-s2t';
-
   import opencc from 'node-opencc';
+  import { ElMessage } from 'element-plus';
 
   // 目标格式 s 简体; t 繁体
   const target = ref('t');
@@ -115,9 +114,27 @@
   async function confirm() {
     isLoading.value = true;
     if (selectModel.value === 'cell') {
-      await cellModel();
+      if (currentFieldId.value && recordId.value) {
+        await cellModel();
+      } else {
+        ElMessage({
+          type: 'error',
+          message: '请选择需要转换的单元格!',
+          duration: 1500,
+          showClose: true,
+        });
+      }
     } else if (selectModel.value === 'field') {
-      await fieldModel();
+      if (fieldId.value) {
+        await fieldModel();
+      } else {
+        ElMessage({
+          type: 'error',
+          message: '请选择需要转换的字段!',
+          duration: 1500,
+          showClose: true,
+        });
+      }
     } else {
       await databaseModel();
     }
@@ -125,22 +142,24 @@
   }
 
   async function cellModel() {
+    ElMessage({
+      message: '开始转换数据~',
+      type: 'success',
+      duration: 1500,
+    });
+
     const table = await base.getActiveTable();
     let newValue = getNewValue(currentValue.value);
-
-    // // 简体转繁体
-    // if (target.value === 't') {
-    //   newValue = Chinese.s2t(currentValue.value);
-    // }
-
-    // // 繁体转简体
-    // if (target.value === 's') {
-    //   newValue = Chinese.t2s(currentValue.value);
-    // }
 
     if (currentFieldId.value && recordId.value) {
       await table.setCellValue(currentFieldId.value, recordId.value, newValue);
     }
+
+    ElMessage({
+      message: '数据转换结束!',
+      type: 'success',
+      duration: 1500,
+    });
   }
 
   async function fieldModel() {
@@ -172,16 +191,6 @@
       if (!val) continue;
 
       let newValue = getNewValue(val[0]?.text);
-
-      // // 简体转繁体
-      // if (target.value === 't') {
-      //   newValue = Chinese.s2t(val[0]?.text);
-      // }
-
-      // // 繁体转简体
-      // if (target.value === 's') {
-      //   newValue = Chinese.t2s(val[0]?.text);
-      // }
 
       // FIXME 处理数据
       _list.push({
@@ -230,16 +239,6 @@
 
         if (val) {
           let newValue = getNewValue(val[0]?.text);
-
-          // // 简体转繁体
-          // if (target.value === 't') {
-          //   newValue = Chinese.s2t(val[0]?.text);
-          // }
-
-          // // 繁体转简体
-          // if (target.value === 's') {
-          //   newValue = Chinese.t2s(val[0]?.text);
-          // }
 
           // FIXME 处理数据
           _list.push({
