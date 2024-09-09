@@ -2,8 +2,8 @@
  * @Version    : v1.00
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
- * @LastAuthor : itchaox
- * @LastTime   : 2023-12-12 21:38
+ * @LastAuthor : Wang Chao
+ * @LastTime   : 2024-09-09 10:47
  * @desc       : 
 -->
 <script setup>
@@ -170,23 +170,16 @@
     });
 
     const table = await bitable.base.getTable(databaseId.value);
-    const recordList = await table.getRecordList();
-    const recordIds = await table.getRecordIdList(); // 获取所有记录 id
+
+    await getAllRecordList();
+    await getAllRecordIdList();
 
     let _list = [];
 
-    for (const record of recordList) {
-      const id = record.id;
-      // 获取索引
-      const index = recordList.recordIdList.findIndex((iId) => iId === id);
-
-      // FIXME 用这个api获取 cell，性能很差
-      // const cell = await record.getCellByField(fieldId.value);
-
+    for (let index = 0; index < recordList.length; index++) {
       const field = await table.getFieldById(fieldId.value);
       const cell = await field.getCell(recordIds[index]);
       const val = await cell.getValue();
-      // const val = await cell.val;
 
       if (!val) continue;
 
@@ -211,6 +204,30 @@
     });
   }
 
+  const recordIds = [];
+
+  async function getAllRecordIdList(_pageToken = 0) {
+    const table = await bitable.base.getTable(databaseId.value);
+    const data = await table.getRecordIdListByPage({ pageSize: 200, pageToken: _pageToken }); // 获取所有记录 id
+    const { total, hasMore, recordIds: recordIdsData, pageToken } = data;
+    recordIds.push(...recordIdsData);
+    if (hasMore) {
+      await getAllRecordIdList(pageToken);
+    }
+  }
+
+  const recordList = [];
+  async function getAllRecordList(_pageToken = 0) {
+    const table = await bitable.base.getTable(databaseId.value);
+    const data = await table.getRecordListByPage({ pageSize: 200, pageToken: _pageToken });
+    const { total, hasMore, records: recordsData, pageToken } = data;
+    recordList.push(...recordsData);
+
+    if (hasMore) {
+      await getAllRecordList(pageToken);
+    }
+  }
+
   async function databaseModel() {
     ElMessage({
       message: '开始转换数据~',
@@ -220,18 +237,15 @@
 
     const table = await bitable.base.getTable(databaseId.value);
     const _fieldList = await table.getFieldMetaList();
-    const recordList = await table.getRecordList();
-    const recordIds = await table.getRecordIdList(); // 获取所有记录 id
+
+    await getAllRecordList();
+    await getAllRecordIdList();
 
     const filterFieldList = _fieldList.filter((item) => item.type === 1);
 
     for (const item of filterFieldList) {
       let _list = [];
-      for (const record of recordList) {
-        const id = record.id;
-        // 获取索引
-        const index = recordList.recordIdList.findIndex((iId) => iId === id);
-
+      for (let index = 0; index < recordList; index++) {
         // 只遍历文本列
         const field = await table.getFieldById(item.id);
         const cell = await field.getCell(recordIds[index]);
