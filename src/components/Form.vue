@@ -3,7 +3,7 @@
  * @Author     : itchaox
  * @Date       : 2023-09-26 15:10
  * @LastAuthor : Wang Chao
- * @LastTime   : 2024-09-09 10:47
+ * @LastTime   : 2024-09-09 13:16
  * @desc       : 
 -->
 <script setup>
@@ -245,7 +245,7 @@
 
     for (const item of filterFieldList) {
       let _list = [];
-      for (let index = 0; index < recordList; index++) {
+      for (let index = 0; index < recordList.length; index++) {
         // 只遍历文本列
         const field = await table.getFieldById(item.id);
         const cell = await field.getCell(recordIds[index]);
